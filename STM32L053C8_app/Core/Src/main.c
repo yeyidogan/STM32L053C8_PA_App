@@ -102,25 +102,16 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay (400 + u32_mtmp);
+    HAL_Delay (500 + u32_mtmp);
     HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
     HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
+    HAL_Delay (500 + u32_mtmp);
     HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
     HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
-    HAL_Delay (400 + u32_mtmp);
-    HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
-    HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
-    HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
-    HAL_Delay (200 + u32_mtmp);
-    HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

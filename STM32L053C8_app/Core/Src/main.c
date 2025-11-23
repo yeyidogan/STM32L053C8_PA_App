@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "usbd_cdc_if.h"
+#include "modbus.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,10 +46,11 @@
 /* USER CODE BEGIN PV */
 
 __attribute__((used, section(".app_signature")))
-const __IO uint32_t flash_app_code = (uint32_t) 0xAA5500FF;
+    const __IO uint32_t flash_app_code =
+    (uint32_t) 0xAA5500FF;
 
 uint32_t u32_mtmp = 0;
-
+uint8_t modbus_packet_received = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,15 +105,28 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
+  HAL_Delay (500 + u32_mtmp);
+  HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
+  HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
+  HAL_Delay (500 + u32_mtmp);
+  HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
+  HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
+  HAL_Delay (500 + u32_mtmp);
+  HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
+  HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay (500 + u32_mtmp);
-    HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
-    HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
-    HAL_Delay (500 + u32_mtmp);
-    HAL_GPIO_TogglePin (Red_LED_GPIO_Port, Red_LED_Pin);
-    HAL_GPIO_TogglePin (Green_LED_GPIO_Port, Green_LED_Pin);
+    if (modbus_packet_received == true)
+    {
+      modbus_packet_received = false;
+      modbusRTU ();
+    }
+    if (mbTxRxData.txLength)
+    {
+      HAL_Delay (10);
+      CDC_Transmit_FS (mbTxRxData.ptrTxData, mbTxRxData.txLength);
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

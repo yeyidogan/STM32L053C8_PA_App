@@ -50,7 +50,7 @@ __attribute__((used, section(".app_signature")))
     (uint32_t) 0xAA5500FF;
 
 uint32_t u32_mtmp = 0;
-uint8_t modbus_packet_received = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -117,15 +117,16 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    if (modbus_packet_received == true)
+    if (mbTxRxData.rxLength)
     {
-      modbus_packet_received = false;
       modbusRTU ();
+      mbTxRxData.rxLength = 0;
     }
     if (mbTxRxData.txLength)
     {
       HAL_Delay (10);
       CDC_Transmit_FS (mbTxRxData.ptrTxData, mbTxRxData.txLength);
+      mbTxRxData.txLength = 0;
     }
     /* USER CODE BEGIN 3 */
   }

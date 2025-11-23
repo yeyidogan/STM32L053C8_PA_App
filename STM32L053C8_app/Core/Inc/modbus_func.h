@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "util.h"
-#include "modbus.h"
+//#include "modbus.h"
 
 /* Private macro */
 
@@ -40,12 +40,12 @@ typedef struct
 } ST_MODBUS_HOLDING_REGISTER_TYPE;
 
 /* Private variables */
-extern const uint16_t sizeOfHoldingRegister;
+extern const uint16_t size_of_holding_register;
 /* Private functions */
-extern uint8_t read_coils(void);
-extern uint8_t read_inputs(void);
-extern uint8_t read_HoldingRegister(uint16_t);
-extern uint8_t write_SingleCoil(void);
+//extern uint8_t read_coils(void);
+//extern uint8_t read_inputs(void);
+//extern uint8_t read_HoldingRegister(uint16_t);
+//extern uint8_t write_SingleCoil(void);
 
 extern const ST_MODBUS_HOLDING_REGISTER_TYPE st_holding_reg_array[];
 

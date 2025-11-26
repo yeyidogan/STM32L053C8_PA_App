@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "util.h"
-//#include "modbus.h"
 
 /* Private macro */
 
@@ -32,22 +31,16 @@ enum MODBUS_REGISTER_LIST
 
 typedef struct
 {
+  uint16_t register_address;
   uint16_t *ptr_u16; //r+w to same pointer
   uint16_t (*mb_readFuncPtr)(void); //modbus read function pointer
   uint16_t (*mb_writeFuncPtr)(void); //modbus write function pointer
-  uint8_t qty_register; //multiple registers can be a long variable
-  enum MODBUS_REGISTER_LIST register_type;
 } ST_MODBUS_HOLDING_REGISTER_TYPE;
 
 /* Private variables */
+extern const ST_MODBUS_HOLDING_REGISTER_TYPE st_holding_reg_array[];
 extern const uint16_t size_of_holding_register;
 /* Private functions */
-//extern uint8_t read_coils(void);
-//extern uint8_t read_inputs(void);
-//extern uint8_t read_HoldingRegister(uint16_t);
-//extern uint8_t write_SingleCoil(void);
-
-extern const ST_MODBUS_HOLDING_REGISTER_TYPE st_holding_reg_array[];
 
 #endif
 /* * * END OF FILE * * */

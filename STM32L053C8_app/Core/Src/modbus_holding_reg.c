@@ -3,8 +3,7 @@
  *	Modbus application functions
  *	Created date: 2016.02.20
  *******************************************************************************/
-#include "modbus_func.h"
-
+#include "modbus_holding_reg.h"
 
 /* Private typedef */
 /* Private define */
@@ -33,24 +32,22 @@ uint16_t rwDummyFunc(void)
  *******************************************************************************
  */
 const ST_MODBUS_HOLDING_REGISTER_TYPE st_holding_reg_array[3] = { ////////////////////////
-    { (uint16_t*) &u32_par1 + 1, // pointer 1
-    rwDummyFunc, //dummy func
+    { 0x0000, //40001
+	((uint16_t*) &u32_par1 + 1), // pointer 1
 	rwDummyFunc, //dummy func
-	START_OF_WORD_REGISTER, //start address
-	RW_U16_PTR_VAL //
+	rwDummyFunc, //dummy func
 	},//end of word
 
-	{ ((uint16_t*) &u32_par1), //
+	{ 0x0001, //40002
+	    ((uint16_t*) &u32_par1), //
 	    rwDummyFunc, //
 	    rwDummyFunc, //
-	    END_OF_DWORD_REGISTER, //
-	    RW_U16_PTR_VAL //
 	},//
-	{ ((uint16_t*) &u16_par1), //
+
+	{ 0x0002, //40003
+	    ((uint16_t*) &u16_par1), //
 	    rwDummyFunc, //
 	    rwDummyFunc, //
-	    END_OF_DWORD_REGISTER, //
-	    RW_U16_PTR_VAL //
 	}, //
     };
 

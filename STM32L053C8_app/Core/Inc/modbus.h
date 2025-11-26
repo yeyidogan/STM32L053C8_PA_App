@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "util.h"
-#include "modbus_func.h"
+#include "modbus_holding_reg.h"
 
 /* Private typedef */
 
@@ -27,23 +27,31 @@ typedef struct
   uint8_t *ptrRxData;
   uint8_t txLength;
   uint8_t rxLength;
-  uint8_t slaveAdd;
+  uint8_t slave_add;
 } MODBUS_TX_RX_DATA;
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
-  UINT16_TYPE startAddress;
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
   UINT16_TYPE quantity;
   UINT16_TYPE crc;
 } __attribute__((packed)) MODBUS_READ_REQUEST_FRAME;
+struct st_modbus_0x01_to_04_req
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
+  UINT16_TYPE quantity;
+  UINT16_TYPE crc;
+} __attribute__((packed));
 //0x01, 0x02, 0x03, 0x04 functions
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
+  uint8_t slave_add;
+  uint8_t function_code;
   UINT16_TYPE address;
   UINT16_TYPE value;
   UINT16_TYPE crc;
@@ -52,48 +60,73 @@ typedef struct
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
-  UINT16_TYPE startAddress;
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
   UINT16_TYPE quantity;
-  uint8_t byteCount;
+  uint8_t byte_count;
   uint8_t value;
 } __attribute__((packed)) MODBUS_WRITE_MULTIPLE_COILS_REQUEST_FRAME;
 //0x0F function
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
-  UINT16_TYPE startAddress;
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
   UINT16_TYPE quantity;
-  uint8_t byteCount;
+  uint8_t byte_count;
   UINT16_TYPE value;
 } __attribute__((packed)) MODBUS_WRITE_MULTIPLE_REGISTERS_REQUEST_FRAME;
+
+struct st_modbus_0x10_req
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
+  UINT16_TYPE quantity;
+  uint8_t byte_count;
+  UINT16_TYPE value;
+} __attribute__((packed));
+struct st_modbus_0x10_resp
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE start_address;
+  UINT16_TYPE quantity;
+  UINT16_TYPE crc;
+} __attribute__((packed));
 //0x10 function
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
+  uint8_t slave_add;
+  uint8_t function_code;
   uint8_t exceptionCode;
   UINT16_TYPE crc;
 } __attribute__((packed)) MODBUS_EXCEPTION_RESPONSE_FRAME;
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
-  uint8_t byteCount;
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint8_t byte_count;
   uint8_t byte;
   UINT16_TYPE crc;
 } __attribute__((packed)) MODBUS_READ_BYTE_RESPONSE_FRAME;
+struct st_modbus_read_byte_resp
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint8_t byte_count;
+  uint8_t byte;
+} __attribute__((packed));
 
 typedef struct
 {
-  uint8_t slaveAdd;
-  uint8_t functionCode;
-  uint8_t byteCount;
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint8_t byte_count;
   UINT16_TYPE word;
   UINT16_TYPE crc;
 } __attribute__((packed)) MODBUS_READ_WORD_RESPONSE_FRAME;
@@ -101,8 +134,8 @@ typedef struct
 /* Private define */
 #define MB_MIN_REQUEST_FRAME_SIZE 0x08
 
-#define MB_COIL_SIZE 0x08 //8 output
-#define MB_INPUT_SIZE 0x08 //8 input
+#define MB_COIL_SIZE 36 //36 output
+#define MB_INPUT_SIZE 18 //18 input
 
 #define PTR_MODBUS_READ_REQ ((MODBUS_READ_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_SINGLE_REQ ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrRxData)

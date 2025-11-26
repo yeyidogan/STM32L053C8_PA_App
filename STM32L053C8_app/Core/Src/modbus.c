@@ -110,7 +110,7 @@ uint8_t check_crc16(uint8_t *ptrCell, uint16_t length)
 
 uint32_t inputs = 0, outputs = 0;
 
-__weak uint32_t read_gpio_outputs(void)
+__weak uint32_t read_gpio_outputs(uint16_t start_address, uint16_t qty_coils)
 {
   return outputs;
 }
@@ -133,14 +133,39 @@ __weak void write_gpio_outputs(uint32_t out)
  */
 uint8_t read_coils(void)
 {
+  struct st_modbus_0x01_to_04_req *ptr_req;
+  struct st_modbus_read_byte_resp *ptr_resp;
+  uint16_t start_add;
 
-  u32_mf_tmp = read_gpio_outputs ();
-  u32_mf_tmp >>= PTR_MODBUS_READ_REQ->quantity.word;
-  PTR_READ_BYTE_RESP->functionCode = FUNC_READ_COILS;
-  PTR_READ_BYTE_RESP->byteCount = 0x01;
-  PTR_READ_BYTE_RESP->byte = u32_mf_tmp;
-  crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME) - 2);
-  mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
+  ptr_req = (struct st_modbus_0x01_to_04_req*) modbus_rx_buf;
+  ptr_resp = (struct st_modbus_read_byte_resp*) modbus_tx_buf;
+
+  ptr_resp->slave_add = ptr_req->slave_add;
+  ptr_resp->function_code = ptr_req->function_code;
+  ptr_resp->byte_count = 0;
+
+  start_add = word_endianer (ptr_req->start_address.word);
+  ptr_u8 = (uint8_t*) &(ptr_resp->byte); //coil data is stored to this and consecutive field
+
+  while (uiWordQty) //uiWordQty = quantity of coils
+  {
+    if (uiWordQty > 8)
+    {
+      *ptr_u8 = (uint8_t) read_gpio_outputs (start_add, 8);
+      uiWordQty -= 8;
+    }
+    else
+    {
+      *ptr_u8 = (uint8_t) read_gpio_outputs (start_add, uiWordQty);
+      uiWordQty = 0;
+    }
+    start_add += 8;
+    ++ptr_u8;
+    ++ptr_resp->byte_count;
+  }
+
+  crc16 (modbus_tx_buf, sizeof(struct st_modbus_read_byte_resp) + ptr_resp->byte_count - 1);
+  mbTxRxData.txLength = sizeof(struct st_modbus_read_byte_resp) + ptr_resp->byte_count + 1;
   return true;
 }
 /**
@@ -155,12 +180,33 @@ uint8_t read_inputs(void)
 {
   u32_mf_tmp = read_gpio_inputs ();
   u32_mf_tmp >>= PTR_MODBUS_READ_REQ->quantity.word;
-  PTR_READ_BYTE_RESP->functionCode = FUNC_READ_DISCRETE_INPUTS;
-  PTR_READ_BYTE_RESP->byteCount = 0x01;
+  PTR_READ_BYTE_RESP->function_code = FUNC_READ_DISCRETE_INPUTS;
+  PTR_READ_BYTE_RESP->byte_count = 0x01;
   PTR_READ_BYTE_RESP->byte = u32_mf_tmp;
   crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME) - 2);
   mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
   return true;
+}
+/**
+ *******************************************************************************
+ * @brief       find index of holding register
+ * @param[in]
+ * @param[in]
+ * @param[out]
+ *******************************************************************************
+ */
+uint16_t find_holding_register(uint16_t start_address)
+{
+  uint16_t i = 0;
+
+  for (i = 0; i < size_of_holding_register; i++)
+  {
+    if (st_holding_reg_array[i].register_address == start_address)
+    {
+      return i;
+    }
+  }
+  return 0xFFFF;
 }
 /**
  *******************************************************************************
@@ -170,38 +216,30 @@ uint8_t read_inputs(void)
  * @param[out] application status true or false
  *******************************************************************************
  */
-uint8_t read_HoldingRegister(uint16_t index_of_HoldingRegister)
+uint8_t read_HoldingRegister(uint16_t address)
 {
-  PTR_READ_HOLDING_REQ->functionCode = FUNC_READ_HOLDING_REGISTERS;
-  PTR_READ_HOLDING_REQ->byteCount = uiWordQty * 2;
+  PTR_READ_HOLDING_REQ->function_code = FUNC_READ_HOLDING_REGISTERS;
+  PTR_READ_HOLDING_REQ->byte_count = uiWordQty * 2;
 
   ptr_u8 = (uint8_t*) &(PTR_READ_HOLDING_REQ->word.word);
+  uint16_t index;
 
   while (uiWordQty--)
   {
-    switch (st_holding_reg_array[index_of_HoldingRegister].register_type) {
-      case W_U16_PTR_VAL:
-	*ptr_u8++ = 0x00;
-	*ptr_u8++ = 0x00;
-	break;
-      case R_U16_PTR_VAL:
-      case RW_U16_PTR_VAL:
-	u16_type_tmp.word = *st_holding_reg_array[index_of_HoldingRegister].ptr_u16;
-	*ptr_u8++ = u16_type_tmp.bytes.high_byte;
-	*ptr_u8++ = u16_type_tmp.bytes.low_byte;
-	break;
-      case RW_U16_FROM_PTR_FUNC:
-	break;
-      case LAST_DUMMY_REGITER:
-	uiWordQty = 0x00;
-	break;
-      default:
-	break;
+    index = find_holding_register (address);
+    if (index >= size_of_holding_register)
+    {
+      return false;
     }
-    ++index_of_HoldingRegister;
+
+    u16_type_tmp.word = *st_holding_reg_array[index].ptr_u16;
+    *ptr_u8++ = u16_type_tmp.bytes.high_byte;
+    *ptr_u8++ = u16_type_tmp.bytes.low_byte;
+    u16_type_tmp.word = st_holding_reg_array[index].mb_readFuncPtr ();
+    ++address;
   }
-  crc16 (mbTxRxData.ptrTxData, 0x03 + PTR_READ_HOLDING_REQ->byteCount);
-  mbTxRxData.txLength = 0x05 + PTR_READ_HOLDING_REQ->byteCount;
+  crc16 (mbTxRxData.ptrTxData, 0x03 + PTR_READ_HOLDING_REQ->byte_count);
+  mbTxRxData.txLength = 0x05 + PTR_READ_HOLDING_REQ->byte_count;
   return true;
 }
 /**
@@ -215,14 +253,14 @@ uint8_t read_HoldingRegister(uint16_t index_of_HoldingRegister)
 uint8_t write_SingleCoil(void)
 {
   uint32_t out;
-  PTR_WRITE_SINGLE_COIL_RESP->functionCode = FUNC_WRITE_SINGLE_COIL;
+  PTR_WRITE_SINGLE_COIL_RESP->function_code = FUNC_WRITE_SINGLE_COIL;
   PTR_WRITE_SINGLE_COIL_RESP->address.word = PTR_MODBUS_WRITE_SINGLE_REQ->address.word;
   PTR_WRITE_SINGLE_COIL_RESP->value.word = PTR_MODBUS_WRITE_SINGLE_REQ->value.word;
   if (PTR_MODBUS_WRITE_SINGLE_REQ->value.word == 0x00FF)
   { //COIL=ON FF00 chanded to 00FF, endian problem
     u32_mf_tmp = 1UL;
     u32_mf_tmp <<= word_endianer (PTR_MODBUS_WRITE_SINGLE_REQ->address.word);
-    out = read_gpio_outputs ();
+    out = read_gpio_outputs (0, 8);
     out |= u32_mf_tmp;
     write_gpio_outputs (out);
   }
@@ -230,7 +268,7 @@ uint8_t write_SingleCoil(void)
   { //COIL=OFF
     u32_mf_tmp = 1UL;
     u32_mf_tmp <<= word_endianer (PTR_MODBUS_WRITE_SINGLE_REQ->address.word);
-    out = read_gpio_outputs ();
+    out = read_gpio_outputs (0, 8);
     out &= ~u32_mf_tmp;
     write_gpio_outputs (out);
   }
@@ -244,8 +282,49 @@ uint8_t write_SingleCoil(void)
   return true;
 }
 
+/**
+ *******************************************************************************
+ * @brief       func 0x10, write holding registers
+ * @param[in]
+ * @param[in]
+ * @param[out] application status true or false
+ *******************************************************************************
+ */
+uint8_t write_HoldingRegister(uint16_t address)
+{
+  struct st_modbus_0x10_req *ptr_req;
+  struct st_modbus_0x10_resp *ptr_resp;
+  UINT16_TYPE u16_type_tmp;
+  uint16_t index;
 
+  ptr_req = (struct st_modbus_0x10_req*) modbus_rx_buf;
+  ptr_resp = (struct st_modbus_0x10_resp*) modbus_tx_buf;
 
+  ptr_resp->slave_add = ptr_req->slave_add;
+  ptr_resp->function_code = FUNC_WRITE_MULTIPLE_REGISTERS; //0x10
+  ptr_resp->start_address = ptr_req->start_address;
+  ptr_resp->quantity.word = ptr_req->quantity.word;
+
+  ptr_u8 = (uint8_t*) &(ptr_req->value);
+
+  while (uiWordQty--)
+  {
+    index = find_holding_register (address);
+    if (index >= size_of_holding_register)
+    {
+      return false;
+    }
+    u16_type_tmp.bytes.high_byte = *ptr_u8++;
+    u16_type_tmp.bytes.low_byte = *ptr_u8++;
+    *st_holding_reg_array[index].ptr_u16 = u16_type_tmp.word;
+    st_holding_reg_array[index].mb_writeFuncPtr ();
+    ++address;
+  }
+
+  crc16 (modbus_tx_buf, 0x06);
+  mbTxRxData.txLength = 0x08;
+  return true;
+}
 
 /**
  *******************************************************************************
@@ -258,8 +337,8 @@ uint8_t write_SingleCoil(void)
 void mb_return_exception(uint8_t exceptionCode)
 {
 
-  PTR_EXCEPTION->slaveAdd = *mbTxRxData.ptrRxData;
-  PTR_EXCEPTION->functionCode = PTR_MODBUS_READ_REQ->functionCode + 0x80;
+  PTR_EXCEPTION->slave_add = *mbTxRxData.ptrRxData;
+  PTR_EXCEPTION->function_code = PTR_MODBUS_READ_REQ->function_code + 0x80;
   PTR_EXCEPTION->exceptionCode = exceptionCode;
 
   crc16 (mbTxRxData.ptrTxData, SIZE_OF_EXCEPTION_FRAME - 2);
@@ -287,17 +366,17 @@ void modbusRTU(void)
     return;
   }
 
-  mbTxRxData.slaveAdd = 1;
-  if (*mbTxRxData.ptrRxData == mbTxRxData.slaveAdd)
+  mbTxRxData.slave_add = 1;
+  if (*mbTxRxData.ptrRxData == mbTxRxData.slave_add)
   {
     if (check_crc16 (mbTxRxData.ptrRxData, mbTxRxData.rxLength - 2) == false)
     {
       return;
     }
-    *mbTxRxData.ptrTxData = mbTxRxData.slaveAdd;
+    *mbTxRxData.ptrTxData = mbTxRxData.slave_add;
 
     //check function code and quantity
-    switch (PTR_MODBUS_READ_REQ->functionCode) {
+    switch (PTR_MODBUS_READ_REQ->function_code) {
       case FUNC_READ_COILS:
       case FUNC_READ_DISCRETE_INPUTS:
       case FUNC_READ_HOLDING_REGISTERS:
@@ -315,9 +394,9 @@ void modbusRTU(void)
 
     uiWordQty = word_endianer (PTR_MODBUS_READ_REQ->quantity.word);
 
-    switch (PTR_MODBUS_READ_REQ->functionCode) {
+    switch (PTR_MODBUS_READ_REQ->function_code) {
       case FUNC_READ_COILS:
-	tmp = word_endianer (PTR_MODBUS_READ_REQ->startAddress.word) + uiWordQty;
+	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word) + uiWordQty;
 	if (tmp > MB_COIL_SIZE)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
@@ -329,7 +408,7 @@ void modbusRTU(void)
 	}
 	break;
       case FUNC_READ_DISCRETE_INPUTS:
-	tmp = word_endianer (PTR_MODBUS_READ_REQ->startAddress.word) + uiWordQty;
+	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word) + uiWordQty;
 	if (tmp > MB_INPUT_SIZE)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
@@ -341,13 +420,13 @@ void modbusRTU(void)
 	}
 	break;
       case FUNC_READ_HOLDING_REGISTERS:
-	tmp = word_endianer (PTR_MODBUS_READ_REQ->startAddress.word) + uiWordQty;
+	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word) + uiWordQty;
 	if (tmp > size_of_holding_register)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
 	  break;
 	}
-	tmp = word_endianer (PTR_MODBUS_READ_REQ->startAddress.word);
+	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word);
 	if (read_HoldingRegister (tmp) == false)
 	{
 	  mb_return_exception (PROCESS_ERROR);
@@ -372,6 +451,17 @@ void modbusRTU(void)
       case FUNC_WRITE_MULTIPLE_COILS:
 	break;
       case FUNC_WRITE_MULTIPLE_REGISTERS:
+	tmp = word_endianer (PTR_MODBUS_WRITE_MULTIREGI_REQ->start_address.word) + uiWordQty;
+	if (tmp > size_of_holding_register)
+	{
+	  mb_return_exception (OUT_OF_DATA_REGION);
+	  break;
+	}
+	tmp = word_endianer (PTR_MODBUS_WRITE_MULTIREGI_REQ->start_address.word);
+	if (write_HoldingRegister (tmp) == false)
+	{
+	  mb_return_exception (PROCESS_ERROR);
+	}
 	break;
       default:
 	mb_return_exception (FUNCTION_UNSUPPORTED);

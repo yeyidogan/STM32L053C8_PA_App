@@ -119,7 +119,7 @@ int main(void)
     /* USER CODE END WHILE */
     if (mbTxRxData.rxLength)
     {
-      modbusRTU ();
+      modbus_rtu_app ();
       mbTxRxData.rxLength = 0;
     }
     if (mbTxRxData.txLength)

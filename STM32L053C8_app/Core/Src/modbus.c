@@ -131,7 +131,7 @@ __weak void write_gpio_outputs(uint32_t out)
  * @param[out] application status true or false
  *******************************************************************************
  */
-uint8_t read_coils(void)
+uint8_t read_coils_0x01(void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_read_byte_resp *ptr_resp;
@@ -176,15 +176,53 @@ uint8_t read_coils(void)
  * @param[out] application status true or false
  *******************************************************************************
  */
-uint8_t read_inputs(void)
+uint8_t read_discrete_inputs_0x02(void)
 {
-  u32_mf_tmp = read_gpio_inputs ();
-  u32_mf_tmp >>= PTR_MODBUS_READ_REQ->quantity.word;
-  PTR_READ_BYTE_RESP->function_code = FUNC_READ_DISCRETE_INPUTS;
-  PTR_READ_BYTE_RESP->byte_count = 0x01;
-  PTR_READ_BYTE_RESP->byte = u32_mf_tmp;
-  crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME) - 2);
-  mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
+  uint32_t inputs;
+  uint16_t qty_inputs;
+  uint16_t start_addr;
+  uint32_t resp_mask = 0;
+  uint16_t resp_byte_count;
+  uint16_t i;
+  struct st_modbus_0x01_to_04_req *ptr_req;
+  struct st_modbus_0x02_resp *ptr_resp;
+
+  ptr_req = (struct st_modbus_0x01_to_04_req*) modbus_rx_buf;
+  ptr_resp = (struct st_modbus_0x02_resp*) modbus_tx_buf;
+
+  ptr_resp->slave_add = ptr_req->slave_add;
+  ptr_resp->function_code = FUNC_READ_DISCRETE_INPUTS;
+
+  qty_inputs = ptr_req->quantity.word;
+  start_addr = ptr_req->start_address.word;
+  if (start_addr + qty_inputs > MODBUS_INPUTS_QTY)
+  {
+    return false;
+  }
+  inputs = read_gpio_inputs ();
+  inputs >>= start_addr;
+  for (i = 0; i < qty_inputs; i++)
+  {
+    resp_mask <<= 1;
+    resp_mask |= 1;
+  }
+  inputs &= resp_mask;
+  resp_byte_count = (qty_inputs + 7) / 8;
+
+  for (i = 0; i < resp_byte_count; i++)
+  {
+    ptr_resp->data[i] = (uint8_t) (inputs & 0x00FF);
+  }
+  crc16 (modbus_tx_buf, 2 + i);
+  mbTxRxData.txLength = 4 + i;
+
+//  u32_mf_tmp = read_gpio_inputs ();
+//  u32_mf_tmp >>= PTR_MODBUS_READ_REQ->quantity.word;
+//  PTR_READ_BYTE_RESP->function_code = FUNC_READ_DISCRETE_INPUTS;
+//  PTR_READ_BYTE_RESP->byte_count = 0x01;
+//  PTR_READ_BYTE_RESP->byte = u32_mf_tmp;
+//  crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME) - 2);
+//  mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
   return true;
 }
 /**
@@ -336,12 +374,15 @@ uint8_t write_HoldingRegister(uint16_t address)
 #define SIZE_OF_EXCEPTION_FRAME 0x05
 void mb_return_exception(uint8_t exceptionCode)
 {
+  struct st_modbus_exc_resp *ptr_resp;
 
-  PTR_EXCEPTION->slave_add = *mbTxRxData.ptrRxData;
-  PTR_EXCEPTION->function_code = PTR_MODBUS_READ_REQ->function_code + 0x80;
-  PTR_EXCEPTION->exceptionCode = exceptionCode;
+  ptr_resp = (struct st_modbus_exc_resp*) modbus_tx_buf;
 
-  crc16 (mbTxRxData.ptrTxData, SIZE_OF_EXCEPTION_FRAME - 2);
+  ptr_resp->slave_add = *mbTxRxData.ptrRxData;
+  ptr_resp->function_code = PTR_MODBUS_READ_REQ->function_code + 0x80;
+  ptr_resp->exceptionCode = exceptionCode;
+
+  crc16 (modbus_tx_buf, SIZE_OF_EXCEPTION_FRAME - 2);
   mbTxRxData.txLength = SIZE_OF_EXCEPTION_FRAME;
 }
 
@@ -353,7 +394,7 @@ void mb_return_exception(uint8_t exceptionCode)
  * @details     none.
  *******************************************************************************
  */
-void modbusRTU(void)
+void modbus_rtu_app(void)
 {
   uint16_t tmp;
   mbTxRxData.txLength = 0x00;
@@ -397,24 +438,24 @@ void modbusRTU(void)
     switch (PTR_MODBUS_READ_REQ->function_code) {
       case FUNC_READ_COILS:
 	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word) + uiWordQty;
-	if (tmp > MB_COIL_SIZE)
+	if (tmp > MODBUS_COILS_QTY)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
 	  break;
 	}
-	if (read_coils () == false)
+	if (read_coils_0x01 () == false)
 	{
 	  mb_return_exception (PROCESS_ERROR);
 	}
 	break;
       case FUNC_READ_DISCRETE_INPUTS:
 	tmp = word_endianer (PTR_MODBUS_READ_REQ->start_address.word) + uiWordQty;
-	if (tmp > MB_INPUT_SIZE)
+	if (tmp > MODBUS_INPUTS_QTY)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
 	  break;
 	}
-	if (read_inputs () == false)
+	if (read_discrete_inputs_0x02 () == false)
 	{
 	  mb_return_exception (PROCESS_ERROR);
 	}
@@ -436,7 +477,7 @@ void modbusRTU(void)
 	break;
       case FUNC_WRITE_SINGLE_COIL:
 	tmp = word_endianer (PTR_MODBUS_WRITE_SINGLE_REQ->address.word);
-	if (tmp >= MB_COIL_SIZE)
+	if (tmp >= MODBUS_COILS_QTY)
 	{
 	  mb_return_exception (OUT_OF_DATA_REGION);
 	  break;

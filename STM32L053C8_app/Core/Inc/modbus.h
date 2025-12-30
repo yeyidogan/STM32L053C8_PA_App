@@ -12,14 +12,19 @@
 #include "modbus_holding_reg.h"
 
 /* Private typedef */
+#define MODBUS_INPUTS_QTY 18 //18 input
+#define MODBUS_COILS_QTY 36 //36 output
+/* Private typedef */
 
-typedef union{
+typedef union
+{
   uint16_t word;
-  struct{
+  struct
+  {
     uint8_t low_byte;
     uint8_t high_byte;
-  }bytes;
-}UINT16_TYPE;
+  } bytes;
+} UINT16_TYPE;
 
 typedef struct
 {
@@ -47,6 +52,12 @@ struct st_modbus_0x01_to_04_req
   UINT16_TYPE crc;
 } __attribute__((packed));
 //0x01, 0x02, 0x03, 0x04 functions
+
+struct st_modbus_0x02_resp{
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint8_t data[32];
+};
 
 typedef struct
 {
@@ -88,6 +99,7 @@ struct st_modbus_0x10_req
   uint8_t byte_count;
   UINT16_TYPE value;
 } __attribute__((packed));
+
 struct st_modbus_0x10_resp
 {
   uint8_t slave_add;
@@ -98,13 +110,13 @@ struct st_modbus_0x10_resp
 } __attribute__((packed));
 //0x10 function
 
-typedef struct
+struct st_modbus_exc_resp
 {
   uint8_t slave_add;
   uint8_t function_code;
   uint8_t exceptionCode;
   UINT16_TYPE crc;
-} __attribute__((packed)) MODBUS_EXCEPTION_RESPONSE_FRAME;
+} __attribute__((packed));
 
 typedef struct
 {
@@ -134,15 +146,13 @@ typedef struct
 /* Private define */
 #define MB_MIN_REQUEST_FRAME_SIZE 0x08
 
-#define MB_COIL_SIZE 36 //36 output
-#define MB_INPUT_SIZE 18 //18 input
+
 
 #define PTR_MODBUS_READ_REQ ((MODBUS_READ_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_SINGLE_REQ ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_MULTICOIL_REQ ((MODBUS_WRITE_MULTIPLE_COILS_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_MULTIREGI_REQ ((MODBUS_WRITE_MULTIPLE_REGISTERS_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 
-#define PTR_EXCEPTION ((MODBUS_EXCEPTION_RESPONSE_FRAME *)mbTxRxData.ptrTxData)
 #define PTR_READ_BYTE_RESP ((MODBUS_READ_BYTE_RESPONSE_FRAME *)mbTxRxData.ptrTxData)
 
 #define PTR_WRITE_SINGLE_COIL_RESP ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrTxData)
@@ -175,7 +185,7 @@ extern MODBUS_TX_RX_DATA mbTxRxData;
 extern uint16_t uiWordQty;
 
 /* Private functions */
-extern void modbusRTU(void);
+extern void modbus_rtu_app(void);
 extern void crc16(uint8_t *ptrCell, uint8_t length);
 
 #endif

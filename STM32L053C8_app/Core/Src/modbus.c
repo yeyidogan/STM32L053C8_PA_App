@@ -16,7 +16,7 @@ struct struct_modbus_data st_modbus_data;
 uint8_t modbus_rx_buf[64];
 uint8_t modbus_tx_buf[64];
 
-const UINT16_TYPE stCrcTable[] = { { 0x0000 }, { 0xC1C0 }, { 0x81C1 }, { 0x4001 }, { 0x01C3 }, {
+const UINT16_TYPE crc_table[] = { { 0x0000 }, { 0xC1C0 }, { 0x81C1 }, { 0x4001 }, { 0x01C3 }, {
     0xC003 }, { 0x8002 }, { 0x41C2 }, { 0x01C6 }, { 0xC006 }, { 0x8007 }, { 0x41C7 }, { 0x0005 }, {
     0xC1C5 }, { 0x81C4 }, { 0x4004 }, { 0x01CC }, { 0xC00C }, { 0x800D }, { 0x41CD }, { 0x000F }, {
     0xC1CF }, { 0x81CE }, { 0x400E }, { 0x000A }, { 0xC1CA }, { 0x81CB }, { 0x400B }, { 0x01C9 }, {
@@ -61,16 +61,16 @@ const UINT16_TYPE stCrcTable[] = { { 0x0000 }, { 0xC1C0 }, { 0x81C1 }, { 0x4001 
 void crc16(uint8_t *ptr_data, uint8_t length)
 {
   uint8_t ucIndex;
-  UINT16_TYPE crcWord = { 0xFFFF };
+  UINT16_TYPE crc = { 0xFFFF };
 
   while (length--)
   {
-    ucIndex = crcWord.bytes.high_byte ^ *ptr_data++;
-    crcWord.bytes.high_byte = crcWord.bytes.low_byte ^ stCrcTable[ucIndex].bytes.high_byte;
-    crcWord.bytes.low_byte = stCrcTable[ucIndex].bytes.low_byte;
+    ucIndex = crc.bytes.high_byte ^ *ptr_data++;
+    crc.bytes.high_byte = crc.bytes.low_byte ^ crc_table[ucIndex].bytes.high_byte;
+    crc.bytes.low_byte = crc_table[ucIndex].bytes.low_byte;
   }
-  *ptr_data++ = crcWord.bytes.high_byte;
-  *ptr_data = crcWord.bytes.low_byte;
+  *ptr_data++ = crc.bytes.high_byte;
+  *ptr_data = crc.bytes.low_byte;
 }
 
 /**
@@ -81,22 +81,24 @@ void crc16(uint8_t *ptr_data, uint8_t length)
  * @param[out]  true or false
  *******************************************************************************
  */
-uint8_t check_crc16(uint8_t *ptrCell, uint16_t length)
+uint8_t check_crc16(uint8_t *ptr_data, uint16_t length)
 {
   uint8_t ucIndex;
-  UINT16_TYPE crcWord = { 0xFFFF };
+  UINT16_TYPE crc = { 0xFFFF };
 
   while (length--)
   {
-    ucIndex = crcWord.bytes.high_byte ^ *ptrCell++;
-    crcWord.bytes.high_byte = crcWord.bytes.low_byte ^ stCrcTable[ucIndex].bytes.high_byte;
-    crcWord.bytes.low_byte = stCrcTable[ucIndex].bytes.low_byte;
+    ucIndex = crc.bytes.high_byte ^ *ptr_data++;
+    crc.bytes.high_byte = crc.bytes.low_byte ^ crc_table[ucIndex].bytes.high_byte;
+    crc.bytes.low_byte = crc_table[ucIndex].bytes.low_byte;
   }
-  if (crcWord.bytes.high_byte == *ptrCell)
+  if (crc.bytes.high_byte == *ptr_data)
   {
-    ++ptrCell;
-    if (crcWord.bytes.low_byte == *ptrCell)
+    ++ptr_data;
+    if (crc.bytes.low_byte == *ptr_data)
+    {
       return true;
+    }
   }
   return false;
 }
@@ -187,6 +189,7 @@ uint8_t read_coils_0x01(void)
 //  mbTxRxData.txLength = sizeof(struct st_modbus_read_byte_resp) + ptr_resp->byte_count + 1;
   return EXCEPTION_NONE;
 }
+
 /**
  *******************************************************************************
  * @brief      func 0x02, read inputs
@@ -248,6 +251,7 @@ uint8_t read_discrete_inputs_0x02(void)
 //  mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
   return EXCEPTION_NONE;
 }
+
 /**
  *******************************************************************************
  * @brief       find index of holding register
@@ -269,6 +273,7 @@ uint16_t find_holding_register(uint16_t start_address)
   }
   return 0xFFFF;
 }
+
 /**
  *******************************************************************************
  * @brief       func 0x03, read holding registers
@@ -281,7 +286,7 @@ uint8_t read_holding_register_0x03(void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_io_status_resp *ptr_resp;
-  uint16_t start_addr;
+  uint16_t reg_addr;
   uint16_t qty_registers;
   uint16_t byte_count;
   UINT16_TYPE register_value;
@@ -294,7 +299,7 @@ uint8_t read_holding_register_0x03(void)
   ptr_resp->slave_add = st_modbus_data.slave_add;
   ptr_resp->function_code = FUNC_READ_HOLDING_REGISTERS;
 
-  start_addr = word_endianer (ptr_req->start_address);
+  reg_addr = word_endianer (ptr_req->start_address);
   qty_registers = ptr_req->quantity;
   byte_count = 2 * qty_registers;
 
@@ -305,15 +310,15 @@ uint8_t read_holding_register_0x03(void)
   }
   while (qty_registers--)
   {
-    index = find_holding_register (start_addr);
+    index = find_holding_register (reg_addr);
     if (index >= size_of_holding_register)
     {
       return OUT_OF_DATA_REGION;
     }
-    register_value.word = *st_holding_reg_array[index].ptr_u16;
+    register_value.word = st_holding_reg_array[index].mb_read_function (reg_addr);
     ptr_resp->data[i++] = register_value.bytes.high_byte;
     ptr_resp->data[i++] = register_value.bytes.low_byte;
-    ++start_addr;
+    ++reg_addr;
   }
   ptr_resp->byte_count = i;
   crc16 (modbus_tx_buf, 0x03 + byte_count);
@@ -342,6 +347,7 @@ uint8_t read_holding_register_0x03(void)
 //  mbTxRxData.txLength = 0x05 + PTR_READ_HOLDING_REQ->byte_count;
   return EXCEPTION_NONE;
 }
+
 /**
  *******************************************************************************
  * @brief       func 0x04, read input registers
@@ -498,8 +504,8 @@ uint8_t write_single_register_0x06(void)
   {
     return OUT_OF_DATA_REGION;
   }
-  *st_holding_reg_array[index].ptr_u16 = reg_value;
-  st_holding_reg_array[index].mb_writeFuncPtr ();
+  //*st_holding_reg_array[index].ptr_u16 = reg_value;
+  st_holding_reg_array[index].mb_write_function (reg_value);
 
   crc16 (modbus_tx_buf, 0x06);
   st_modbus_data.tx_length = 0x08;
@@ -617,8 +623,7 @@ uint8_t write_holding_register_0x10(void)
     }
     u16_type_tmp.bytes.high_byte = *ptr_u8++;
     u16_type_tmp.bytes.low_byte = *ptr_u8++;
-    *st_holding_reg_array[index].ptr_u16 = u16_type_tmp.word;
-    st_holding_reg_array[index].mb_writeFuncPtr ();
+    st_holding_reg_array[index].mb_write_function (u16_type_tmp.word);
     ++start_addr;
   }
 
@@ -634,7 +639,7 @@ uint8_t write_holding_register_0x10(void)
  * @param[out]  none
  *******************************************************************************
  */
-void mb_return_exception(uint8_t exceptionCode)
+void mb_return_exception(uint8_t exception_code)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_exc_resp *ptr_resp;
@@ -644,7 +649,7 @@ void mb_return_exception(uint8_t exceptionCode)
 
   ptr_resp->slave_add = ptr_req->slave_add;
   ptr_resp->function_code = ptr_req->function_code + 0x80;
-  ptr_resp->exceptionCode = exceptionCode;
+  ptr_resp->exceptionCode = exception_code;
 
   crc16 (modbus_tx_buf, 3);
   st_modbus_data.tx_length = 5;
@@ -661,12 +666,12 @@ void mb_return_exception(uint8_t exceptionCode)
 void modbus_rtu_app(void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
-  st_modbus_data.tx_length = 0x00;
   uint16_t tmp;
   uint8_t return_code;
 
   st_modbus_data.ptr_rx = modbus_rx_buf;
   st_modbus_data.ptr_tx = modbus_tx_buf;
+  st_modbus_data.tx_length = 0x00;
 
   ptr_req = (struct st_modbus_0x01_to_04_req*) modbus_rx_buf;
   if (st_modbus_data.rx_length < MB_MIN_REQUEST_FRAME_SIZE)

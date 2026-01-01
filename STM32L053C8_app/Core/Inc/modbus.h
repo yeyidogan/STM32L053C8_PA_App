@@ -12,8 +12,8 @@
 #include "modbus_holding_reg.h"
 
 /* Private typedef */
-#define MODBUS_INPUTS_QTY 18 //18 input
-#define MODBUS_COILS_QTY 36 //36 output
+#define MODBUS_INPUTS_QTY 18 //18 input //UP TO 32
+#define MODBUS_COILS_QTY 30 //30 output
 /* Private typedef */
 
 typedef union
@@ -53,11 +53,12 @@ struct st_modbus_0x01_to_04_req
 } __attribute__((packed));
 //0x01, 0x02, 0x03, 0x04 functions
 
-struct st_modbus_0x02_resp{
+struct st_modbus_io_status_resp{
   uint8_t slave_add;
   uint8_t function_code;
-  uint8_t data[32];
-};
+  uint8_t byte_count;
+  uint8_t data[60];
+} __attribute__((packed));
 
 typedef struct
 {
@@ -67,6 +68,14 @@ typedef struct
   UINT16_TYPE value;
   UINT16_TYPE crc;
 } __attribute__((packed)) MODBUS_WRITE_SINGLE_REQUEST_FRAME;
+struct st_modbus_write_single_req_resp
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  UINT16_TYPE address;
+  UINT16_TYPE value;
+//  UINT16_TYPE crc;
+} __attribute__((packed));
 //0x05 and 0x06 functions
 
 typedef struct
@@ -148,7 +157,7 @@ typedef struct
 
 
 
-#define PTR_MODBUS_READ_REQ ((MODBUS_READ_REQUEST_FRAME *)mbTxRxData.ptrRxData)
+//#define PTR_MODBUS_READ_REQ ((MODBUS_READ_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_SINGLE_REQ ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_MULTICOIL_REQ ((MODBUS_WRITE_MULTIPLE_COILS_REQUEST_FRAME *)mbTxRxData.ptrRxData)
 #define PTR_MODBUS_WRITE_MULTIREGI_REQ ((MODBUS_WRITE_MULTIPLE_REGISTERS_REQUEST_FRAME *)mbTxRxData.ptrRxData)

@@ -26,115 +26,109 @@ typedef union
   } bytes;
 } UINT16_TYPE;
 
-typedef struct
+struct struct_modbus_data
 {
-  uint8_t *ptrTxData;
-  uint8_t *ptrRxData;
-  uint8_t txLength;
-  uint8_t rxLength;
+  uint8_t *ptr_tx;
+  uint8_t *ptr_rx;
+  uint8_t tx_length;
+  uint8_t rx_length;
   uint8_t slave_add;
-} MODBUS_TX_RX_DATA;
+};
 
-typedef struct
-{
-  uint8_t slave_add;
-  uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
-  UINT16_TYPE crc;
-} __attribute__((packed)) MODBUS_READ_REQUEST_FRAME;
 struct st_modbus_0x01_to_04_req
 {
   uint8_t slave_add;
   uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
-  UINT16_TYPE crc;
+  uint16_t start_address;
+  uint16_t quantity;
+  uint16_t crc;
 } __attribute__((packed));
 //0x01, 0x02, 0x03, 0x04 functions
 
-struct st_modbus_io_status_resp{
+struct st_modbus_io_status_resp
+{
   uint8_t slave_add;
   uint8_t function_code;
   uint8_t byte_count;
   uint8_t data[60];
 } __attribute__((packed));
 
-typedef struct
-{
-  uint8_t slave_add;
-  uint8_t function_code;
-  UINT16_TYPE address;
-  UINT16_TYPE value;
-  UINT16_TYPE crc;
-} __attribute__((packed)) MODBUS_WRITE_SINGLE_REQUEST_FRAME;
 struct st_modbus_write_single_req_resp
 {
   uint8_t slave_add;
   uint8_t function_code;
-  UINT16_TYPE address;
-  UINT16_TYPE value;
+  uint16_t address;
+  uint16_t value;
 //  UINT16_TYPE crc;
 } __attribute__((packed));
 //0x05 and 0x06 functions
 
-typedef struct
+struct st_modbus_write_multiple_coils_req
 {
   uint8_t slave_add;
   uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
+  uint16_t start_address;
+  uint16_t quantity;
   uint8_t byte_count;
-  uint8_t value;
-} __attribute__((packed)) MODBUS_WRITE_MULTIPLE_COILS_REQUEST_FRAME;
+  uint8_t data[60];
+} __attribute__((packed));
 //0x0F function
-
-typedef struct
-{
-  uint8_t slave_add;
-  uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
-  uint8_t byte_count;
-  UINT16_TYPE value;
-} __attribute__((packed)) MODBUS_WRITE_MULTIPLE_REGISTERS_REQUEST_FRAME;
 
 struct st_modbus_0x10_req
 {
   uint8_t slave_add;
   uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
+  uint16_t start_address;
+  uint16_t quantity;
   uint8_t byte_count;
-  UINT16_TYPE value;
+  uint16_t value;
 } __attribute__((packed));
 
 struct st_modbus_0x10_resp
 {
   uint8_t slave_add;
   uint8_t function_code;
-  UINT16_TYPE start_address;
-  UINT16_TYPE quantity;
-  UINT16_TYPE crc;
+  uint16_t start_address;
+  uint16_t quantity;
+  uint16_t crc;
 } __attribute__((packed));
 //0x10 function
+
+struct st_modbus_0x0F_req
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint16_t start_address;
+  uint16_t quantity;
+  uint8_t byte_count;
+  uint8_t outputs_value[60];
+} __attribute__((packed));
+//0x0F function
+struct st_modbus_0x0F_resp
+{
+  uint8_t slave_add;
+  uint8_t function_code;
+  uint16_t start_address;
+  uint16_t quantity;
+} __attribute__((packed));
+//0x0F function
 
 struct st_modbus_exc_resp
 {
   uint8_t slave_add;
   uint8_t function_code;
   uint8_t exceptionCode;
-  UINT16_TYPE crc;
+  uint16_t crc;
 } __attribute__((packed));
 
-typedef struct
-{
-  uint8_t slave_add;
-  uint8_t function_code;
-  uint8_t byte_count;
-  uint8_t byte;
-  UINT16_TYPE crc;
-} __attribute__((packed)) MODBUS_READ_BYTE_RESPONSE_FRAME;
+//typedef struct
+//{
+//  uint8_t slave_add;
+//  uint8_t function_code;
+//  uint8_t byte_count;
+//  uint8_t byte;
+//  UINT16_TYPE crc;
+//} __attribute__((packed)) MODBUS_READ_BYTE_RESPONSE_FRAME;
 struct st_modbus_read_byte_resp
 {
   uint8_t slave_add;
@@ -143,30 +137,17 @@ struct st_modbus_read_byte_resp
   uint8_t byte;
 } __attribute__((packed));
 
-typedef struct
-{
-  uint8_t slave_add;
-  uint8_t function_code;
-  uint8_t byte_count;
-  UINT16_TYPE word;
-  UINT16_TYPE crc;
-} __attribute__((packed)) MODBUS_READ_WORD_RESPONSE_FRAME;
+//typedef struct
+//{
+//  uint8_t slave_add;
+//  uint8_t function_code;
+//  uint8_t byte_count;
+//  UINT16_TYPE word;
+//  UINT16_TYPE crc;
+//} __attribute__((packed)) MODBUS_READ_WORD_RESPONSE_FRAME;
 
 /* Private define */
 #define MB_MIN_REQUEST_FRAME_SIZE 0x08
-
-
-
-//#define PTR_MODBUS_READ_REQ ((MODBUS_READ_REQUEST_FRAME *)mbTxRxData.ptrRxData)
-#define PTR_MODBUS_WRITE_SINGLE_REQ ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrRxData)
-#define PTR_MODBUS_WRITE_MULTICOIL_REQ ((MODBUS_WRITE_MULTIPLE_COILS_REQUEST_FRAME *)mbTxRxData.ptrRxData)
-#define PTR_MODBUS_WRITE_MULTIREGI_REQ ((MODBUS_WRITE_MULTIPLE_REGISTERS_REQUEST_FRAME *)mbTxRxData.ptrRxData)
-
-#define PTR_READ_BYTE_RESP ((MODBUS_READ_BYTE_RESPONSE_FRAME *)mbTxRxData.ptrTxData)
-
-#define PTR_WRITE_SINGLE_COIL_RESP ((MODBUS_WRITE_SINGLE_REQUEST_FRAME *)mbTxRxData.ptrTxData)
-
-#define PTR_READ_HOLDING_REQ ((MODBUS_READ_WORD_RESPONSE_FRAME *)mbTxRxData.ptrTxData)
 
 enum
 {
@@ -190,12 +171,11 @@ enum
 /* Private macro */
 /* Private variables */
 
-extern MODBUS_TX_RX_DATA mbTxRxData;
-extern uint16_t uiWordQty;
+extern struct struct_modbus_data st_modbus_data;
 
 /* Private functions */
 extern void modbus_rtu_app(void);
-extern void crc16(uint8_t *ptrCell, uint8_t length);
+extern void crc16(uint8_t *ptr_Data, uint8_t length);
 
 #endif
 /* * * END OF FILE * * */

@@ -264,7 +264,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   memcpy(modbus_rx_buf, Buf, *Len);
-  mbTxRxData.rxLength = *Len;
+  st_modbus_data.rx_length = *Len;
   return (USBD_OK);
   /* USER CODE END 6 */
 }

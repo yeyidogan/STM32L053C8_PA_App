@@ -117,16 +117,16 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    if (mbTxRxData.rxLength)
+    if (st_modbus_data.rx_length)
     {
       modbus_rtu_app ();
-      mbTxRxData.rxLength = 0;
+      st_modbus_data.rx_length = 0;
     }
-    if (mbTxRxData.txLength)
+    if (st_modbus_data.tx_length)
     {
       HAL_Delay (10);
-      CDC_Transmit_FS (mbTxRxData.ptrTxData, mbTxRxData.txLength);
-      mbTxRxData.txLength = 0;
+      CDC_Transmit_FS (st_modbus_data.ptr_tx, st_modbus_data.tx_length);
+      st_modbus_data.tx_length = 0;
     }
     /* USER CODE BEGIN 3 */
   }

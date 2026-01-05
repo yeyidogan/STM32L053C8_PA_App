@@ -41,7 +41,6 @@ struct st_modbus_0x01_to_04_req
   uint8_t function_code;
   uint16_t start_address;
   uint16_t quantity;
-  uint16_t crc;
 } __attribute__((packed));
 //0x01, 0x02, 0x03, 0x04 functions
 
@@ -59,7 +58,6 @@ struct st_modbus_write_single_req_resp
   uint8_t function_code;
   uint16_t address;
   uint16_t value;
-//  UINT16_TYPE crc;
 } __attribute__((packed));
 //0x05 and 0x06 functions
 
@@ -118,17 +116,9 @@ struct st_modbus_exc_resp
   uint8_t slave_add;
   uint8_t function_code;
   uint8_t exceptionCode;
-  uint16_t crc;
+  //uint16_t crc;
 } __attribute__((packed));
 
-//typedef struct
-//{
-//  uint8_t slave_add;
-//  uint8_t function_code;
-//  uint8_t byte_count;
-//  uint8_t byte;
-//  UINT16_TYPE crc;
-//} __attribute__((packed)) MODBUS_READ_BYTE_RESPONSE_FRAME;
 struct st_modbus_read_byte_resp
 {
   uint8_t slave_add;
@@ -136,15 +126,6 @@ struct st_modbus_read_byte_resp
   uint8_t byte_count;
   uint8_t byte;
 } __attribute__((packed));
-
-//typedef struct
-//{
-//  uint8_t slave_add;
-//  uint8_t function_code;
-//  uint8_t byte_count;
-//  UINT16_TYPE word;
-//  UINT16_TYPE crc;
-//} __attribute__((packed)) MODBUS_READ_WORD_RESPONSE_FRAME;
 
 /* Private define */
 #define MB_MIN_REQUEST_FRAME_SIZE 0x08

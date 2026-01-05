@@ -103,7 +103,7 @@ uint8_t check_crc16(uint8_t *ptr_data, uint16_t length)
   return false;
 }
 
-uint32_t inputs = 0, outputs = 0;
+uint32_t inputs = 0xDDCC9876, outputs = 0x98765432;
 
 __weak uint32_t read_gpio_outputs(uint16_t start_address, uint16_t qty_coils)
 {
@@ -144,7 +144,7 @@ uint8_t read_coils_0x01(void)
   ptr_resp->slave_add = st_modbus_data.slave_add;
   ptr_resp->function_code = ptr_req->function_code;
 
-  qty_coils = ptr_req->quantity;
+  qty_coils = word_endianer (ptr_req->quantity);
   start_addr = word_endianer (ptr_req->start_address);
   if (start_addr + qty_coils > MODBUS_COILS_QTY)
   {
@@ -161,32 +161,12 @@ uint8_t read_coils_0x01(void)
   for (i = 0; i < resp_byte_count; i++)
   {
     ptr_resp->data[i] = (uint8_t) (outputs & 0x00FF);
+    outputs >>= 8;
   }
   ptr_resp->byte_count = i;
   crc16 (modbus_tx_buf, 3 + i);
   st_modbus_data.tx_length = 5 + i;
 
-//  ptr_u8 = (uint8_t*) &(ptr_resp->byte); //coil data is stored to this and consecutive field
-//
-//  while (qty_coils) //uiWordQty = quantity of coils
-//  {
-//    if (qty_coils > 8)
-//    {
-//      *ptr_u8 = (uint8_t) read_gpio_outputs (start_addr, 8);
-//      qty_coils -= 8;
-//    }
-//    else
-//    {
-//      *ptr_u8 = (uint8_t) read_gpio_outputs (start_addr, qty_coils);
-//      qty_coils = 0;
-//    }
-//    start_add += 8;
-//    ++ptr_u8;
-//    ++ptr_resp->byte_count;
-//  }
-//
-//  crc16 (modbus_tx_buf, sizeof(struct st_modbus_read_byte_resp) + ptr_resp->byte_count - 1);
-//  mbTxRxData.txLength = sizeof(struct st_modbus_read_byte_resp) + ptr_resp->byte_count + 1;
   return EXCEPTION_NONE;
 }
 
@@ -216,7 +196,7 @@ uint8_t read_discrete_inputs_0x02(void)
   ptr_resp->slave_add = st_modbus_data.slave_add;
   ptr_resp->function_code = FUNC_READ_DISCRETE_INPUTS;
 
-  qty_inputs = ptr_req->quantity;
+  qty_inputs = word_endianer (ptr_req->quantity);
   start_addr = word_endianer (ptr_req->start_address);
   if (start_addr + qty_inputs > MODBUS_INPUTS_QTY)
   {
@@ -226,11 +206,7 @@ uint8_t read_discrete_inputs_0x02(void)
   inputs >>= start_addr;
   resp_mask <<= qty_inputs;
   resp_mask -= 1;
-//  for (i = 0; i < qty_inputs; i++)
-//  {
-//    resp_mask <<= 1;
-//    resp_mask |= 1;
-//  }
+
   inputs &= resp_mask;
   resp_byte_count = (qty_inputs + 7) / 8;
 
@@ -242,13 +218,6 @@ uint8_t read_discrete_inputs_0x02(void)
   crc16 (modbus_tx_buf, 3 + i);
   st_modbus_data.tx_length = 5 + i;
 
-//  u32_mf_tmp = read_gpio_inputs ();
-//  u32_mf_tmp >>= PTR_MODBUS_READ_REQ->quantity.word;
-//  PTR_READ_BYTE_RESP->function_code = FUNC_READ_DISCRETE_INPUTS;
-//  PTR_READ_BYTE_RESP->byte_count = 0x01;
-//  PTR_READ_BYTE_RESP->byte = u32_mf_tmp;
-//  crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME) - 2);
-//  mbTxRxData.txLength = sizeof(MODBUS_READ_BYTE_RESPONSE_FRAME);
   return EXCEPTION_NONE;
 }
 
@@ -300,7 +269,7 @@ uint8_t read_holding_register_0x03(void)
   ptr_resp->function_code = FUNC_READ_HOLDING_REGISTERS;
 
   reg_addr = word_endianer (ptr_req->start_address);
-  qty_registers = ptr_req->quantity;
+  qty_registers = word_endianer (ptr_req->quantity);
   byte_count = 2 * qty_registers;
 
   i = 0;
@@ -324,27 +293,6 @@ uint8_t read_holding_register_0x03(void)
   crc16 (modbus_tx_buf, 0x03 + byte_count);
   st_modbus_data.tx_length = 0x05 + byte_count;
 
-//  PTR_READ_HOLDING_REQ->function_code = FUNC_READ_HOLDING_REGISTERS;
-//  PTR_READ_HOLDING_REQ->byte_count = uiWordQty * 2;
-//
-//  ptr_u8 = (uint8_t*) &(PTR_READ_HOLDING_REQ->word.word);
-//
-//  while (uiWordQty--)
-//  {
-//    index = find_holding_register (address);
-//    if (index >= size_of_holding_register)
-//    {
-//      return false;
-//    }
-//
-//    u16_type_tmp.word = *st_holding_reg_array[index].ptr_u16;
-//    *ptr_u8++ = u16_type_tmp.bytes.high_byte;
-//    *ptr_u8++ = u16_type_tmp.bytes.low_byte;
-//    u16_type_tmp.word = st_holding_reg_array[index].mb_readFuncPtr ();
-//    ++address;
-//  }
-//  crc16 (mbTxRxData.ptrTxData, 0x03 + PTR_READ_HOLDING_REQ->byte_count);
-//  mbTxRxData.txLength = 0x05 + PTR_READ_HOLDING_REQ->byte_count;
   return EXCEPTION_NONE;
 }
 
@@ -374,22 +322,28 @@ uint8_t read_input_registers_0x04(void)
   ptr_resp->function_code = FUNC_READ_INPUT_REGISTERS;
 
   start_addr = word_endianer (ptr_req->start_address);
-  qty_registers = ptr_req->quantity;
-  if (start_addr + qty_registers > 1)
+  qty_registers = word_endianer (ptr_req->quantity);
+  if (start_addr + qty_registers > ((MODBUS_INPUTS_QTY + 15) / 16))
+  {
     return OUT_OF_DATA_REGION;
+  }
   if (qty_registers == 0)
+  {
     return OUT_OF_DATA_REGION;
+  }
 
   byte_count = 2 * qty_registers;
 
   inputs = read_gpio_inputs ();
   inputs >>= (16 * start_addr);
 
+  i = 0;
   while (qty_registers--)
   {
-    register_value.word = inputs & 0x00FF;
+    register_value.word = inputs & 0xFFFF;
     ptr_resp->data[i++] = register_value.bytes.high_byte;
     ptr_resp->data[i++] = register_value.bytes.low_byte;
+    inputs >>= 16;
   }
   ptr_resp->byte_count = i;
   crc16 (modbus_tx_buf, 0x03 + byte_count);
@@ -442,34 +396,8 @@ uint8_t write_single_coil_0x05(void)
     return PROCESS_ERROR;
   }
   crc16 (modbus_tx_buf, sizeof(struct st_modbus_write_single_req_resp));
-  st_modbus_data.tx_length = sizeof(struct st_modbus_write_single_req_resp);
+  st_modbus_data.tx_length = sizeof(struct st_modbus_write_single_req_resp) + 2;
 
-//  PTR_WRITE_SINGLE_COIL_RESP->function_code = FUNC_WRITE_SINGLE_COIL;
-//  PTR_WRITE_SINGLE_COIL_RESP->address.word = PTR_MODBUS_WRITE_SINGLE_REQ->address.word;
-//  PTR_WRITE_SINGLE_COIL_RESP->value.word = PTR_MODBUS_WRITE_SINGLE_REQ->value.word;
-//  if (PTR_MODBUS_WRITE_SINGLE_REQ->value.word == 0x00FF)
-//  { //COIL=ON FF00 chanded to 00FF, endian problem
-//    u32_mf_tmp = 1UL;
-//    u32_mf_tmp <<= word_endianer (PTR_MODBUS_WRITE_SINGLE_REQ->address.word);
-//    out = read_gpio_outputs (0, 8);
-//    out |= u32_mf_tmp;
-//    write_gpio_outputs (out);
-//  }
-//  else if (PTR_MODBUS_WRITE_SINGLE_REQ->value.word == 0x0000)
-//  { //COIL=OFF
-//    u32_mf_tmp = 1UL;
-//    u32_mf_tmp <<= word_endianer (PTR_MODBUS_WRITE_SINGLE_REQ->address.word);
-//    out = read_gpio_outputs (0, 8);
-//    out &= ~u32_mf_tmp;
-//    write_gpio_outputs (out);
-//  }
-//  else
-//  {
-//    return false;
-//  }
-//
-//  crc16 (mbTxRxData.ptrTxData, sizeof(MODBUS_WRITE_SINGLE_REQUEST_FRAME) - 2);
-//  mbTxRxData.txLength = sizeof(MODBUS_WRITE_SINGLE_REQUEST_FRAME);
   return EXCEPTION_NONE;
 }
 
@@ -504,7 +432,7 @@ uint8_t write_single_register_0x06(void)
   {
     return OUT_OF_DATA_REGION;
   }
-  //*st_holding_reg_array[index].ptr_u16 = reg_value;
+
   st_holding_reg_array[index].mb_write_function (reg_value);
 
   crc16 (modbus_tx_buf, 0x06);
@@ -608,7 +536,7 @@ uint8_t write_holding_register_0x10(void)
   ptr_u8 = (uint8_t*) &(ptr_req->value);
 
   start_addr = word_endianer (ptr_req->start_address);
-  qty_registers = ptr_req->quantity;
+  qty_registers = word_endianer (ptr_req->quantity);
 
   if (qty_registers == 0)
   {

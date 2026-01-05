@@ -22,80 +22,51 @@ uint16_t u16_par1 = 0xABCD;
  * @param[out] application status true
  *******************************************************************************
  */
-uint16_t read_dummy_func(uint16_t val)
+uint16_t read_dummy_func (uint16_t val)
 {
   return val;
 }
-uint16_t write_dummy_func(uint16_t val)
+uint16_t write_dummy_func (uint16_t val)
 {
   return val;
 }
 
-uint16_t read_adc_val(uint16_t channel)
+uint16_t read_adc_val (uint16_t channel)
 {
-  return (0x1000 + channel);
+  return (0x1000 + channel); //sample value
 }
 /**
  *******************************************************************************
  * @brief       modbus holding register list
  *******************************************************************************
  */
-const struct struct_modbus_holding_registers st_holding_reg_array[] = { ////////////////////////
-    { 0x0000, //40001
-	read_adc_val, //dummy func
-	write_dummy_func, //dummy func
-	},//
-
-	{ 0x0001, //40002
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-
-	{ 0x0002, //40003
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0003, //40004
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0004, //40005
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0005, //40006
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0006, //40007
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0007, //40008
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0008, //40009
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x0009, //40010
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x000A, //40011
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x000B, //40012
-	    read_adc_val, //
-	    write_dummy_func, //
-	},//
-	{ 0x000C, //40013
-	    read_adc_val, //
-	    write_dummy_func, //
-	}, //
-    };
+const struct struct_modbus_holding_registers st_holding_reg_array[] = {
+//40001
+    { 0x0000, read_adc_val, write_dummy_func },
+    //40002
+    { 0x0001, read_adc_val, write_dummy_func },
+    //40003
+    { 0x0002, read_adc_val, write_dummy_func },
+    //40004
+    { 0x0003, read_adc_val, write_dummy_func },
+    //40005
+    { 0x0004, read_adc_val, write_dummy_func },
+    //40006
+    { 0x0005, read_adc_val, write_dummy_func },
+    //40006
+    { 0x0006, read_adc_val, write_dummy_func },
+    //40007
+    { 0x0007, read_adc_val, write_dummy_func },
+    //40008
+    { 0x0008, read_adc_val, write_dummy_func },
+    //40009
+    { 0x0009, read_adc_val, write_dummy_func },
+    //40010
+    { 0x000A, read_adc_val, write_dummy_func },
+    //40011
+    { 0x000B, read_adc_val, write_dummy_func, },
+    //40012
+    { 0x000C, read_adc_val, write_dummy_func, }, };
 
 const uint16_t size_of_holding_register = sizeof(st_holding_reg_array)
     / sizeof(struct struct_modbus_holding_registers);

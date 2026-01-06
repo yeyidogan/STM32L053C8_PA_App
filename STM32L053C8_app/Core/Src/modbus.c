@@ -77,7 +77,7 @@ const UINT16_TYPE crc_table[] = { { 0x0000 }, { 0xC1C0 }, //
  * @param[out]  crc
  *******************************************************************************
  */
-void crc16(uint8_t *ptr_data, uint8_t length)
+void crc16 (uint8_t *ptr_data, uint8_t length)
 {
   uint8_t ucIndex;
   UINT16_TYPE crc = { 0xFFFF };
@@ -85,7 +85,8 @@ void crc16(uint8_t *ptr_data, uint8_t length)
   while (length--)
   {
     ucIndex = crc.bytes.high_byte ^ *ptr_data++;
-    crc.bytes.high_byte = crc.bytes.low_byte ^ crc_table[ucIndex].bytes.high_byte;
+    crc.bytes.high_byte = crc.bytes.low_byte
+        ^ crc_table[ucIndex].bytes.high_byte;
     crc.bytes.low_byte = crc_table[ucIndex].bytes.low_byte;
   }
   *ptr_data++ = crc.bytes.high_byte;
@@ -100,7 +101,7 @@ void crc16(uint8_t *ptr_data, uint8_t length)
  * @param[out]  true or false
  *******************************************************************************
  */
-uint8_t check_crc16(uint8_t *ptr_data, uint16_t length)
+uint8_t check_crc16 (uint8_t *ptr_data, uint16_t length)
 {
   uint8_t ucIndex;
   UINT16_TYPE crc = { 0xFFFF };
@@ -108,7 +109,8 @@ uint8_t check_crc16(uint8_t *ptr_data, uint16_t length)
   while (length--)
   {
     ucIndex = crc.bytes.high_byte ^ *ptr_data++;
-    crc.bytes.high_byte = crc.bytes.low_byte ^ crc_table[ucIndex].bytes.high_byte;
+    crc.bytes.high_byte = crc.bytes.low_byte
+        ^ crc_table[ucIndex].bytes.high_byte;
     crc.bytes.low_byte = crc_table[ucIndex].bytes.low_byte;
   }
   if (crc.bytes.high_byte == *ptr_data)
@@ -124,15 +126,15 @@ uint8_t check_crc16(uint8_t *ptr_data, uint16_t length)
 
 uint32_t inputs = 0xDDCC9876, outputs = 0x98765432;
 
-__weak uint32_t read_gpio_outputs(void)
+__weak uint32_t read_gpio_outputs (void)
 {
   return outputs;
 }
-__weak uint32_t read_gpio_inputs(void)
+__weak uint32_t read_gpio_inputs (void)
 {
   return inputs;
 }
-__weak void write_gpio_outputs(uint32_t out)
+__weak void write_gpio_outputs (uint32_t out)
 {
   outputs = out;
 }
@@ -142,10 +144,10 @@ __weak void write_gpio_outputs(uint32_t out)
  * @brief      func 0x01, read coils, outputs
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out] modbus error code
  *******************************************************************************
  */
-uint8_t read_coils_0x01(void)
+uint8_t read_coils_0x01 (void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_io_status_resp *ptr_resp;
@@ -165,6 +167,10 @@ uint8_t read_coils_0x01(void)
 
   qty_coils = word_endianer (ptr_req->quantity);
   start_addr = word_endianer (ptr_req->start_address);
+  if (qty_coils < 1 || qty_coils > 0x07D0)
+  {
+    return OUT_OF_MB_LIMIT;
+  }
   if (start_addr + qty_coils > MODBUS_COILS_QTY)
   {
     return OUT_OF_DATA_REGION;
@@ -194,10 +200,10 @@ uint8_t read_coils_0x01(void)
  * @brief      func 0x02, read inputs
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out] modbus error code
  *******************************************************************************
  */
-uint8_t read_discrete_inputs_0x02(void)
+uint8_t read_discrete_inputs_0x02 (void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_io_status_resp *ptr_resp;
@@ -217,6 +223,10 @@ uint8_t read_discrete_inputs_0x02(void)
 
   qty_inputs = word_endianer (ptr_req->quantity);
   start_addr = word_endianer (ptr_req->start_address);
+  if (qty_inputs < 1 || qty_inputs > 0x07D0)
+  {
+    return OUT_OF_MB_LIMIT;
+  }
   if (start_addr + qty_inputs > MODBUS_INPUTS_QTY)
   {
     return OUT_OF_DATA_REGION;
@@ -248,7 +258,7 @@ uint8_t read_discrete_inputs_0x02(void)
  * @param[out]
  *******************************************************************************
  */
-uint16_t find_holding_register(uint16_t start_address)
+uint16_t find_holding_register (uint16_t start_address)
 {
   uint16_t i = 0;
 
@@ -267,10 +277,10 @@ uint16_t find_holding_register(uint16_t start_address)
  * @brief       func 0x03, read holding registers
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t read_holding_register_0x03(void)
+uint8_t read_holding_register_0x03 (void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_io_status_resp *ptr_resp;
@@ -292,9 +302,9 @@ uint8_t read_holding_register_0x03(void)
   byte_count = 2 * qty_registers;
 
   i = 0;
-  if (qty_registers == 0)
+  if (qty_registers < 1 || qty_registers > 0x007D)
   {
-    return OUT_OF_DATA_REGION;
+    return OUT_OF_MB_LIMIT;
   }
   while (qty_registers--)
   {
@@ -303,7 +313,8 @@ uint8_t read_holding_register_0x03(void)
     {
       return OUT_OF_DATA_REGION;
     }
-    register_value.word = st_holding_reg_array[index].mb_read_function (reg_addr);
+    register_value.word = st_holding_reg_array[index].mb_read_function (
+        reg_addr);
     ptr_resp->data[i++] = register_value.bytes.high_byte;
     ptr_resp->data[i++] = register_value.bytes.low_byte;
     ++reg_addr;
@@ -320,10 +331,10 @@ uint8_t read_holding_register_0x03(void)
  * @brief       func 0x04, read input registers
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t read_input_registers_0x04(void)
+uint8_t read_input_registers_0x04 (void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_io_status_resp *ptr_resp;
@@ -343,11 +354,12 @@ uint8_t read_input_registers_0x04(void)
   start_addr = word_endianer (ptr_req->start_address);
   qty_registers = word_endianer (ptr_req->quantity);
 
-  if (start_addr + qty_registers > ((MODBUS_INPUTS_QTY + 15) / 16))
+  if (qty_registers < 1 || qty_registers > 0x007D)
   {
-    return OUT_OF_DATA_REGION;
+    return OUT_OF_MB_LIMIT;
   }
-  if (qty_registers == 0)
+
+  if (start_addr + qty_registers > ((MODBUS_INPUTS_QTY + 15) / 16))
   {
     return OUT_OF_DATA_REGION;
   }
@@ -375,14 +387,15 @@ uint8_t read_input_registers_0x04(void)
  * @brief       func 0x05, write single coil
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t write_single_coil_0x05(void)
+uint8_t write_single_coil_0x05 (void)
 {
   struct st_modbus_write_single_req_resp *ptr_req;
   struct st_modbus_write_single_req_resp *ptr_resp;
   uint16_t output_addr;
+  uint16_t output_value;
   uint32_t outputs;
   uint32_t resp_mask = 1;
 
@@ -394,6 +407,7 @@ uint8_t write_single_coil_0x05(void)
   ptr_resp->value = ptr_req->value;
 
   output_addr = word_endianer (ptr_req->address);
+  output_value = word_endianer (ptr_req->value);
   if (output_addr >= MODBUS_INPUTS_QTY)
   {
     return OUT_OF_DATA_REGION;
@@ -401,19 +415,19 @@ uint8_t write_single_coil_0x05(void)
   outputs = read_gpio_outputs ();
   resp_mask = 1;
   resp_mask <<= output_addr;
-  if (ptr_req->value == 0x00FF)
-  { // COIL=ON FF00 changed to 00FF, endian problem
+  if (output_value == 0xFF00)
+  { // COIL=ON FF00
     outputs |= resp_mask;
     write_gpio_outputs (outputs);
   }
-  else if (ptr_req->value == 0x0000)
+  else if (output_value == 0x0000)
   {
     outputs &= (0xFFFF - resp_mask);
     write_gpio_outputs (outputs);
   }
   else
   {
-    return PROCESS_ERROR;
+    return OUT_OF_MB_LIMIT;
   }
   crc16 (modbus_tx_buf, sizeof(struct st_modbus_write_single_req_resp));
   st_modbus_data.tx_length = sizeof(struct st_modbus_write_single_req_resp) + 2;
@@ -426,10 +440,10 @@ uint8_t write_single_coil_0x05(void)
  * @brief       func 0x06, write single holding registers
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t write_single_register_0x06(void)
+uint8_t write_single_register_0x06 (void)
 {
   struct st_modbus_write_single_req_resp *ptr_req;
   struct st_modbus_write_single_req_resp *ptr_resp;
@@ -466,10 +480,10 @@ uint8_t write_single_register_0x06(void)
  * @brief       func 0x0F, write multiple coils
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t write_multiple_coils_0x0F(void)
+uint8_t write_multiple_coils_0x0F (void)
 {
   struct st_modbus_0x0F_req *ptr_req;
   struct st_modbus_0x0F_resp *ptr_resp;
@@ -492,6 +506,10 @@ uint8_t write_multiple_coils_0x0F(void)
   qty_outputs = word_endianer (ptr_req->quantity);
   byte_count = ptr_req->byte_count;
 
+  if (qty_outputs < 1 || qty_outputs >= 0x07B0)
+  {
+    return OUT_OF_MB_LIMIT;
+  }
   if (byte_count == 0)
   {
     return OUT_OF_DATA_REGION;
@@ -532,10 +550,10 @@ uint8_t write_multiple_coils_0x0F(void)
  * @brief       func 0x10, write holding registers
  * @param[in]
  * @param[in]
- * @param[out] application status true or false
+ * @param[out]  modbus error code
  *******************************************************************************
  */
-uint8_t write_holding_register_0x10(void)
+uint8_t write_holding_register_0x10 (void)
 {
   struct st_modbus_0x10_req *ptr_req;
   struct st_modbus_0x10_resp *ptr_resp;
@@ -558,9 +576,9 @@ uint8_t write_holding_register_0x10(void)
   start_addr = word_endianer (ptr_req->start_address);
   qty_registers = word_endianer (ptr_req->quantity);
 
-  if (qty_registers == 0)
+  if (qty_registers < 1 || qty_registers > 0x007B)
   {
-    return OUT_OF_DATA_REGION;
+    return OUT_OF_MB_LIMIT;
   }
   while (qty_registers--)
   {
@@ -587,7 +605,7 @@ uint8_t write_holding_register_0x10(void)
  * @param[out]  none
  *******************************************************************************
  */
-void mb_return_exception(uint8_t exception_code)
+void mb_return_exception (uint8_t exception_code)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   struct st_modbus_exc_resp *ptr_resp;
@@ -611,7 +629,7 @@ void mb_return_exception(uint8_t exception_code)
  * @details     none.
  *******************************************************************************
  */
-void modbus_rtu_app(void)
+void modbus_rtu_app (void)
 {
   struct st_modbus_0x01_to_04_req *ptr_req;
   uint16_t tmp;
@@ -630,84 +648,87 @@ void modbus_rtu_app(void)
   st_modbus_data.slave_add = 1;
   if (*st_modbus_data.ptr_rx == st_modbus_data.slave_add)
   {
-    if (check_crc16 (st_modbus_data.ptr_rx, st_modbus_data.rx_length - 2) == false)
+    if (check_crc16 (st_modbus_data.ptr_rx,
+                     st_modbus_data.rx_length - 2) == false)
     {
       return;
     }
 
     //check function code and quantity
-    switch (ptr_req->function_code) {
+    switch (ptr_req->function_code)
+    {
       case FUNC_READ_COILS:
       case FUNC_READ_DISCRETE_INPUTS:
-	tmp = word_endianer (ptr_req->quantity);
-	if (tmp == 0 || tmp > 0x07D0)
-	{
-	  mb_return_exception (OUT_OF_MB_LIMIT);
-	  return;
-	}
-	break;
+        tmp = word_endianer (ptr_req->quantity);
+        if (tmp == 0 || tmp > 0x07D0)
+        {
+          mb_return_exception (OUT_OF_MB_LIMIT);
+          return;
+        }
+        break;
     }
 
-    switch (ptr_req->function_code) {
+    switch (ptr_req->function_code)
+    {
       case FUNC_READ_COILS:
-	return_code = read_coils_0x01 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = read_coils_0x01 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_READ_DISCRETE_INPUTS:
-	return_code = read_discrete_inputs_0x02 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = read_discrete_inputs_0x02 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_READ_HOLDING_REGISTERS:
-	return_code = read_holding_register_0x03 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = read_holding_register_0x03 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_READ_INPUT_REGISTERS:
-	return_code = read_input_registers_0x04 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = read_input_registers_0x04 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_WRITE_SINGLE_COIL:
-	return_code = write_single_coil_0x05 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = write_single_coil_0x05 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_WRITE_SINGLE_REGISTER:
-	return_code = write_single_register_0x06 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = write_single_register_0x06 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_WRITE_MULTIPLE_COILS:
-	return_code = write_multiple_coils_0x0F ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = write_multiple_coils_0x0F ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       case FUNC_WRITE_MULTIPLE_REGISTERS:
-	return_code = write_holding_register_0x10 ();
-	if (return_code > EXCEPTION_NONE)
-	{
-	  mb_return_exception (return_code);
-	}
-	break;
+        return_code = write_holding_register_0x10 ();
+        if (return_code > EXCEPTION_NONE)
+        {
+          mb_return_exception (return_code);
+        }
+        break;
       default:
-	mb_return_exception (FUNCTION_UNSUPPORTED);
-	break;
+        mb_return_exception (FUNCTION_UNSUPPORTED);
+        break;
     }
   }
 }

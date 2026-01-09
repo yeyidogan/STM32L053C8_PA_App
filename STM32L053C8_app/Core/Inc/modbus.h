@@ -79,7 +79,7 @@ struct st_modbus_0x10_req
   uint16_t start_address;
   uint16_t quantity;
   uint8_t byte_count;
-  uint16_t value;
+  uint8_t value[60];
 } __attribute__((packed));
 
 struct st_modbus_0x10_resp

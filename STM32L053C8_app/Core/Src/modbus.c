@@ -252,6 +252,30 @@ uint8_t read_discrete_inputs_0x02 (void)
 
 /**
  *******************************************************************************
+ * @brief       get uint16_t data from frame
+ * @param[in]   type 0: High and Low Byte, type 1: Low and High Byte
+ * @param[in]
+ * @param[out]  uint16_t value
+ *******************************************************************************
+ */
+uint16_t get_u16_data (uint8_t *addr, uint8_t type)
+{
+  uint16_t data = 0;
+
+  data = *addr;
+  data <<= 8;
+  data &= 0xFF00;
+  data |= *(addr + 1);
+  if (type == 1)
+  {
+    data <<= 8;
+    data &= 0xFF00;
+    data |= *addr;
+  }
+  return data;
+}
+/**
+ *******************************************************************************
  * @brief       find index of holding register
  * @param[in]
  * @param[in]
@@ -382,6 +406,7 @@ uint8_t read_input_registers_0x04 (void)
   st_modbus_data.tx_length = 0x05 + byte_count;
   return EXCEPTION_NONE;
 }
+
 /**
  *******************************************************************************
  * @brief       func 0x05, write single coil
@@ -561,7 +586,7 @@ uint8_t write_holding_register_0x10 (void)
   uint16_t qty_registers;
   UINT16_TYPE u16_type_tmp;
   uint16_t index;
-  uint8_t *ptr_u8;
+  uint8_t i;
 
   ptr_req = (struct st_modbus_0x10_req*) modbus_rx_buf;
   ptr_resp = (struct st_modbus_0x10_resp*) modbus_tx_buf;
@@ -571,8 +596,6 @@ uint8_t write_holding_register_0x10 (void)
   ptr_resp->start_address = ptr_req->start_address;
   ptr_resp->quantity = ptr_req->quantity;
 
-  ptr_u8 = (uint8_t*) &(ptr_req->value);
-
   start_addr = word_endianer (ptr_req->start_address);
   qty_registers = word_endianer (ptr_req->quantity);
 
@@ -580,6 +603,7 @@ uint8_t write_holding_register_0x10 (void)
   {
     return OUT_OF_MB_LIMIT;
   }
+  i = 0;
   while (qty_registers--)
   {
     index = find_holding_register (start_addr);
@@ -587,8 +611,8 @@ uint8_t write_holding_register_0x10 (void)
     {
       return OUT_OF_DATA_REGION;
     }
-    u16_type_tmp.bytes.high_byte = *ptr_u8++;
-    u16_type_tmp.bytes.low_byte = *ptr_u8++;
+    u16_type_tmp.bytes.high_byte = ptr_req->value[i++];
+    u16_type_tmp.bytes.low_byte = ptr_req->value[i++];
     st_holding_reg_array[index].mb_write_function (u16_type_tmp.word);
     ++start_addr;
   }
